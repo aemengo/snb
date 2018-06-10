@@ -1,0 +1,3 @@
+RUN echo "line 1" > result.txt
+
+RUN echo "line 2" >> result.txt
