@@ -6,6 +6,8 @@ import (
 
 	"testing"
 	"io/ioutil"
+	"encoding/json"
+	"strings"
 )
 
 func TestStore(t *testing.T) {
@@ -18,4 +20,10 @@ func contentsAt(path string) string {
 	contents, err := ioutil.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return string(contents)
+}
+
+func decodeJSONAt(path string, dest interface{}) {
+	contents := contentsAt(path)
+	err := json.NewDecoder(strings.NewReader(contents)).Decode(dest)
+	Expect(err).NotTo(HaveOccurred())
 }
