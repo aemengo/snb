@@ -6,6 +6,10 @@ import (
 	"crypto/sha1"
 	"io"
 	"fmt"
+
+	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/satori/go.uuid"
+	_ "github.com/jmoiron/sqlx"
 )
 
 type Store struct {
