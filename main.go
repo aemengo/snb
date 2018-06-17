@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	str "github.com/aemengo/snb/store"
+	"github.com/fatih/color"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,13 +13,26 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
+	"time"
 )
 
 type Spec struct {
 	Steps []string
 }
 
+var (
+	boldWhite = color.New(color.FgWhite, color.Bold)
+	boldGreen = color.New(color.FgGreen, color.Bold)
+	boldRed   = color.New(color.FgRed, color.Bold)
+	white     = color.New(color.FgWhite)
+	red       = color.New(color.FgRed)
+	logPrefix = " ---> "
+)
+
 func main() {
+	startTime := time.Now()
+
 	store, err := str.New(".snb")
 	if err != nil {
 		log.Fatal("Error: ", err, ".")
@@ -29,9 +45,17 @@ func main() {
 
 	blobList := getBlobList()
 	for index, step := range spec.Steps {
+		boldWhite.Printf("Step %d/%d : %s\n", index+1, len(spec.Steps), step)
+
 		err = executeStep(step)
 		if err != nil {
-			log.Fatal("Error: ", err, ".")
+			exitCode, ok := exitCode(err)
+			if ok {
+				boldRed.Printf("\nBuild failed (exit status: %d)\n", exitCode)
+			} else {
+				boldRed.Printf("\nBuild failed\n")
+			}
+			os.Exit(exitCode)
 		}
 
 		bl := getBlobList()
@@ -39,6 +63,10 @@ func main() {
 		store.SaveStep(step, index, modifiedFiles)
 		blobList = bl
 	}
+
+	endTime := time.Now()
+
+	boldGreen.Printf("\nBuild completed (%f seconds)\n", endTime.Sub(startTime).Seconds())
 }
 
 func getModifiedFiles(oldBlobList, newBlobList map[string]int64) []string {
@@ -97,15 +125,22 @@ func isIgnoredFile(path string) bool {
 }
 
 func executeStep(step string) error {
+	white.Println(logPrefix + "Running")
 	command := exec.Command("bash", "-c", step)
 	command.Env = os.Environ()
 
-	_, err := command.Output()
+	stdout, _ := command.StdoutPipe()
+	stderr, _ := command.StderrPipe()
+
+	err := command.Start()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	go report(stdout, white)
+	go report(stderr, red)
+
+	return command.Wait()
 }
 
 func getSpec() (Spec, error) {
@@ -135,10 +170,31 @@ func getSpec() (Spec, error) {
 	return spec, nil
 }
 
+func report(stdout io.ReadCloser, clr *color.Color) {
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		clr.Println(scanner.Text())
+	}
+}
+
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return false
 	}
 	return true
+}
+
+func exitCode(err error) (int, bool) {
+	exiterr, ok := err.(*exec.ExitError)
+	if !ok {
+		return 0, false
+	}
+
+	status, ok := exiterr.Sys().(syscall.WaitStatus)
+	if !ok {
+		return 0, false
+	}
+
+	return status.ExitStatus(), true
 }
