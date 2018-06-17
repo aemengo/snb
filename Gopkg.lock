@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/fatih/color"
+  packages = ["."]
+  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
+  version = "v1.7.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/jmoiron/sqlx"
   packages = [
@@ -9,6 +15,18 @@
     "reflectx"
   ]
   revision = "0dae4fefe7c0e190f7b5a78dac28a1c82cc8d849"
+
+[[projects]]
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
+  version = "v0.0.9"
+
+[[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
+  version = "v0.0.3"
 
 [[projects]]
   name = "github.com/mattn/go-sqlite3"
@@ -117,6 +135,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0b5eccc18768e0f821cfd7aaef673aaecd58e27a84475c8c827ffe209e314b47"
+  inputs-digest = "0e5b20bf0c8edb1a56b7528abc48010acc12ec0278edfa12019eac138167f4bb"
   solver-name = "gps-cdcl"
   solver-version = 1

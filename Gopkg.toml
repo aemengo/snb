@@ -48,3 +48,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/jmoiron/sqlx"
+
+[[constraint]]
+  name = "github.com/fatih/color"
+  version = "1.7.0"
