@@ -5,21 +5,15 @@ import (
 	"github.com/aemengo/snb/db"
 	"github.com/fatih/color"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
-	"strings"
 	"syscall"
 	"time"
 	"github.com/aemengo/snb/fs"
 	"path/filepath"
 	"fmt"
+	"github.com/aemengo/snb/parser"
 )
-
-type Spec struct {
-	Steps []string
-}
 
 var (
 	boldWhite = color.New(color.FgWhite, color.Bold)
@@ -44,31 +38,40 @@ func main() {
 		workingDir, _ = filepath.Abs(workingDir)
 	}
 
-	path := filepath.Join(workingDir, "ShakeAndBakeFile")
-	if !fs.Exists(path) {
+	fsClient, err := fs.New(workingDir)
+	if err != nil {
+		logFatal(err)
+	}
+
+	if !fsClient.Exists("ShakeAndBakeFile") {
 		logFatal("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
 	}
 
-	store, err := db.New(filepath.Join(workingDir, ".snb"))
+	contents, err := fsClient.Get("ShakeAndBakeFile")
 	if err != nil {
 		logFatal(err)
 	}
-	defer store.Close()
 
-	spec, err := getSpec(path)
+	spec, err := parser.Parse(contents)
 	if err != nil {
 		logFatal(err)
 	}
+
+	dbClient, err := db.New(filepath.Join(workingDir, ".snb"))
+	if err != nil {
+		logFatal(err)
+	}
+	defer dbClient.Close()
 
 	for index, step := range spec.Steps {
 		boldWhite.Printf("Step %d/%d : %s\n", index+1, len(spec.Steps), step)
 
-		srcFiles, err := fs.GetSrcFiles(step)
+		srcFiles, err := fsClient.GetSrcFiles(step)
 		if err != nil {
 			logFatal(err)
 		}
 
-		ok, err := store.IsCached(step, index, srcFiles)
+		ok, err := dbClient.IsCached(step, index, srcFiles)
 		if err != nil {
 			logFatal(err)
 		}
@@ -89,22 +92,15 @@ func main() {
 			os.Exit(exitCode)
 		}
 
-		//TODO save step again
-		//bl := getBlobList()
-		//modifiedFiles := getModifiedFiles(blobList, bl)
-		//store.SaveStep(step, index, modifiedFiles)
-		//blobList = bl
+		err = dbClient.Save(step, index, srcFiles)
+		if err != nil {
+			logFatal(err)
+		}
 	}
 
 	endTime := time.Now()
 
 	boldGreen.Printf("\nBuild completed (%f seconds)\n", endTime.Sub(startTime).Seconds())
-}
-
-
-func logFatal(message interface{}) {
-	fmt.Printf(color.RedString("Error") + ": %s.\n", message)
-	os.Exit(1)
 }
 
 func executeStep(step string) error {
@@ -127,27 +123,6 @@ func executeStep(step string) error {
 	return command.Wait()
 }
 
-func getSpec(path string) (Spec, error) {
-	specFile, err := ioutil.ReadFile(path)
-	if err != nil {
-		return Spec{}, err
-	}
-
-	stepRegex := `RUN\s(.*)`
-	matches := regexp.MustCompile(stepRegex).FindAllStringSubmatch(string(specFile), -1)
-
-	if len(matches) == 0 {
-		//TODO something or no-op
-	}
-
-	var spec Spec
-	for _, match := range matches {
-		spec.Steps = append(spec.Steps, strings.TrimSpace(match[1]))
-	}
-
-	return spec, nil
-}
-
 func report(stdout io.ReadCloser, clr *color.Color) {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
@@ -167,4 +142,9 @@ func exitCode(err error) (int, bool) {
 	}
 
 	return status.ExitStatus(), true
+}
+
+func logFatal(message interface{}) {
+	fmt.Printf(color.RedString("Error") + ": %s.\n", message)
+	os.Exit(1)
 }

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"io/ioutil"
 )
 
 type Object struct {
@@ -14,9 +15,27 @@ type Object struct {
 	Sha  string
 }
 
-func Exists(path string) bool {
-	//TODO support globbing
-	_, err := os.Stat(path)
+type FS struct {
+	workingDir string
+}
+
+func New(workingDir string) (*FS, error) {
+	wDir, err := filepath.Abs(workingDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return &FS{
+		workingDir: wDir,
+	}, nil
+}
+
+func (fs *FS) Get(path string) ([]byte, error) {
+	return ioutil.ReadFile(fs.p(path))
+}
+
+func (fs *FS) Exists(path string) bool {
+	_, err := os.Stat(fs.p(path))
 	if os.IsNotExist(err) {
 		return false
 	}
@@ -24,14 +43,15 @@ func Exists(path string) bool {
 	return true
 }
 
-func GetSrcFiles(step string) ([]Object, error) {
+//TODO support globbing
+func  (fs *FS) GetSrcFiles(step string) ([]Object, error) {
 	var objects []Object
 
 	for _, item := range strings.Split(step, " ") {
 		element := strings.TrimSpace(item)
 
-		if Exists(element) {
-			obj, err := objectFrom(element)
+		if fs.Exists(element) {
+			obj, err := fs.objectFrom(element)
 			if err != nil {
 				return nil, err
 			}
@@ -41,8 +61,8 @@ func GetSrcFiles(step string) ([]Object, error) {
 		}
 
 		goPathElement := filepath.Join("src", element)
-		if Exists(goPathElement) {
-			obj, err := objectFrom(element)
+		if fs.Exists(goPathElement) {
+			obj, err := fs.objectFrom(element)
 			if err != nil {
 				return nil, err
 			}
@@ -54,8 +74,8 @@ func GetSrcFiles(step string) ([]Object, error) {
 	return objects, nil
 }
 
-func objectFrom(path string) (Object, error) {
-	sha, err := getSha(path)
+func (fs *FS) objectFrom(path string) (Object, error) {
+	sha, err := fs.getSha(path)
 	if err != nil {
 		return Object{}, err
 	}
@@ -66,24 +86,26 @@ func objectFrom(path string) (Object, error) {
 	}, nil
 }
 
-func getSha(srcPath string) (string, error) {
+func (fs *FS) getSha(path string) (string, error) {
+	srcPath := fs.p(path)
+
 	info, err := os.Stat(srcPath)
 	if err != nil {
 		return "", err
 	}
 
 	if info.IsDir() {
-		return shaDir(srcPath)
+		return fs.shaDir(srcPath)
 	} else {
-		return shaFile(srcPath)
+		return fs.shaFile(srcPath)
 	}
 }
 
-func shaDir(srcPath string) (string, error) {
+func (fs *FS) shaDir(srcPath string) (string, error) {
 	h := sha1.New()
 
 	filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() || isHiddenFile(path) {
+		if info.IsDir() || fs.isHiddenFile(path) {
 			return nil
 		}
 
@@ -100,7 +122,7 @@ func shaDir(srcPath string) (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func shaFile(srcPath string) (string, error) {
+func (fs *FS) shaFile(srcPath string) (string, error) {
 	f, err := os.Open(srcPath)
 	if err != nil {
 		return "", err
@@ -115,7 +137,7 @@ func shaFile(srcPath string) (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-func isHiddenFile(path string) bool {
+func (fs *FS) isHiddenFile(path string) bool {
 	names := strings.Split(path, string(os.PathSeparator))
 	for _, element := range names {
 		if strings.HasPrefix(element, ".") {
@@ -124,4 +146,12 @@ func isHiddenFile(path string) bool {
 	}
 
 	return false
+}
+
+func (fs *FS) p(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	} else {
+		return filepath.Join(fs.workingDir, path)
+	}
 }

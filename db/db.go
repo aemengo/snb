@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"database/sql"
+	"github.com/aemengo/snb/fs"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/aemengo/snb/fs"
 )
 
 type DB struct {
@@ -92,20 +92,30 @@ func (s *DB) IsCached(step string, index int, objects []fs.Object) (bool, error)
 	return stepExists && allPathsExists(), nil
 }
 
-//func (s *Store) SaveStep(step string, index int, modifiedFiles []string) error {
-//	for _, file := range modifiedFiles {
-//		err := s.SaveBlob(file)
-//		if err != nil {
-//			return err
-//		}
-//	}
-//
-//	_, err := s.db.Exec(`
-//	insert into steps
-//	 (definition, number) VALUES
-//	 ($1, $2)`,
-//		step, index,
-//	)
-//
-//	return err
-//}
+func (s *DB) Save(step string, index int, objects []fs.Object) error {
+	_, err := s.db.Exec(`
+		insert or replace into steps
+		 (definition, number) VALUES
+		 ($1, $2)`,
+		step, index,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range objects {
+		_, err := s.db.Exec(`
+		insert or replace into objects
+		  (path, sha) VALUES
+		  ($1, $2)`,
+			obj.Path, obj.Sha,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
