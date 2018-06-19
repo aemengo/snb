@@ -10,11 +10,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"syscall"
 	"time"
+	"github.com/aemengo/snb/fs"
 )
 
 type Spec struct {
@@ -47,8 +47,12 @@ func main() {
 	for index, step := range spec.Steps {
 		boldWhite.Printf("Step %d/%d : %s\n", index+1, len(spec.Steps), step)
 
-		srcFiles := getSrcFiles(step)
-		_, ok, err := store.AnalyzeStep(step, index, srcFiles)
+		srcFiles, err := fs.GetSrcFiles(step)
+		if err != nil {
+			log.Fatal("Error: ", err, ".")
+		}
+
+		ok, err := store.IsCached(step, index, srcFiles)
 		if err != nil {
 			log.Fatal("Error: ", err, ".")
 		}
@@ -80,24 +84,6 @@ func main() {
 	endTime := time.Now()
 
 	boldGreen.Printf("\nBuild completed (%f seconds)\n", endTime.Sub(startTime).Seconds())
-}
-
-func getSrcFiles(step string) []string {
-	var list []string
-
-	for _, element := range strings.Split(step, " ") {
-		if exists(element) {
-			list = append(list, element)
-			continue
-		}
-
-		goPathElement := filepath.Join("src", element)
-		if exists(goPathElement) {
-			list = append(list, goPathElement)
-		}
-	}
-
-	return list
 }
 
 //func getModifiedFiles(oldBlobList, newBlobList map[string]int64) []string {
@@ -164,7 +150,7 @@ func executeStep(step string) error {
 func getSpec() (Spec, error) {
 	path := "ShakeAndBakeFile"
 
-	if !exists(path) {
+	if !fs.Exists(path) {
 		return Spec{}, errors.New("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
 	}
 
@@ -193,14 +179,6 @@ func report(stdout io.ReadCloser, clr *color.Color) {
 	for scanner.Scan() {
 		clr.Println(scanner.Text())
 	}
-}
-
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
 
 func exitCode(err error) (int, bool) {
