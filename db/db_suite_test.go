@@ -1,4 +1,4 @@
-package store_test
+package db_test
 
 import (
 	. "github.com/onsi/ginkgo"

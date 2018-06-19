@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
-	str "github.com/aemengo/snb/store"
+	"github.com/aemengo/snb/db"
 	"github.com/fatih/color"
 	"io"
 	"io/ioutil"
@@ -33,7 +33,7 @@ var (
 func main() {
 	startTime := time.Now()
 
-	store, err := str.New(".snb")
+	store, err := db.New(".snb")
 	if err != nil {
 		log.Fatal("Error: ", err, ".")
 	}

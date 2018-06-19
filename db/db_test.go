@@ -1,4 +1,4 @@
-package store_test
+package db_test
 
 import (
 	. "github.com/aemengo/snb/store"
@@ -12,7 +12,7 @@ import (
 var _ = Describe("Store", func() {
 	var (
 		dir string
-		store *Store
+		store *DB
 	)
 
 	BeforeEach(func() {

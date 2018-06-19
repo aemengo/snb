@@ -1,4 +1,4 @@
-package store
+package db
 
 import (
 	"fmt"
@@ -11,12 +11,12 @@ import (
 	"github.com/aemengo/snb/fs"
 )
 
-type Store struct {
+type DB struct {
 	root string
 	db   *sqlx.DB
 }
 
-func New(rootDir string) (*Store, error) {
+func New(rootDir string) (*DB, error) {
 	if err := os.MkdirAll(rootDir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -48,17 +48,17 @@ func New(rootDir string) (*Store, error) {
 	);
 	`)
 
-	return &Store{
+	return &DB{
 		root: rootDir,
 		db:   sqlxDB,
 	}, nil
 }
 
-func (s *Store) Close() error {
+func (s *DB) Close() error {
 	return s.db.Close()
 }
 
-func (s *Store) IsCached(step string, index int, objects []fs.Object) (bool, error) {
+func (s *DB) IsCached(step string, index int, objects []fs.Object) (bool, error) {
 	var (
 		stepExists     = false
 		pathsFlags     = make([]bool, len(objects))
