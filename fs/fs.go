@@ -75,7 +75,9 @@ func  (fs *FS) GetSrcFiles(step string) ([]Object, error) {
 }
 
 func (fs *FS) objectFrom(path string) (Object, error) {
-	sha, err := fs.getSha(path)
+	srcPath := fs.p(path)
+
+	sha, err := fs.getSha(srcPath)
 	if err != nil {
 		return Object{}, err
 	}
@@ -87,17 +89,15 @@ func (fs *FS) objectFrom(path string) (Object, error) {
 }
 
 func (fs *FS) getSha(path string) (string, error) {
-	srcPath := fs.p(path)
-
-	info, err := os.Stat(srcPath)
+	info, err := os.Stat(path)
 	if err != nil {
 		return "", err
 	}
 
 	if info.IsDir() {
-		return fs.shaDir(srcPath)
+		return fs.shaDir(path)
 	} else {
-		return fs.shaFile(srcPath)
+		return fs.shaFile(path)
 	}
 }
 

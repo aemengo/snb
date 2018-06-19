@@ -10,7 +10,7 @@ type Spec struct {
 }
 
 func Parse(specFile []byte) (Spec, error) {
-	stepRegex := `RUN\s(.*)`
+	stepRegex := `(?msU)RUN(.*)(?:^\s*$|\z)`
 	matches := regexp.MustCompile(stepRegex).FindAllStringSubmatch(string(specFile), -1)
 
 	if len(matches) == 0 {
