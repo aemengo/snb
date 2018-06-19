@@ -2,12 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"github.com/aemengo/snb/db"
 	"github.com/fatih/color"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -15,6 +13,8 @@ import (
 	"syscall"
 	"time"
 	"github.com/aemengo/snb/fs"
+	"path/filepath"
+	"fmt"
 )
 
 type Spec struct {
@@ -28,20 +28,36 @@ var (
 	white     = color.New(color.FgWhite)
 	red       = color.New(color.FgRed)
 	logPrefix = " ---> "
+	workingDir = "."
 )
 
 func main() {
 	startTime := time.Now()
 
-	store, err := db.New(".snb")
+	if len(os.Args) == 2 {
+		var err error
+		workingDir, err = filepath.Abs(os.Args[1])
+		if err != nil {
+			logFatal(err)
+		}
+	} else {
+		workingDir, _ = filepath.Abs(workingDir)
+	}
+
+	path := filepath.Join(workingDir, "ShakeAndBakeFile")
+	if !fs.Exists(path) {
+		logFatal("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
+	}
+
+	store, err := db.New(filepath.Join(workingDir, ".snb"))
 	if err != nil {
-		log.Fatal("Error: ", err, ".")
+		logFatal(err)
 	}
 	defer store.Close()
 
-	spec, err := getSpec()
+	spec, err := getSpec(path)
 	if err != nil {
-		log.Fatal("Error: ", err, ".")
+		logFatal(err)
 	}
 
 	for index, step := range spec.Steps {
@@ -49,12 +65,12 @@ func main() {
 
 		srcFiles, err := fs.GetSrcFiles(step)
 		if err != nil {
-			log.Fatal("Error: ", err, ".")
+			logFatal(err)
 		}
 
 		ok, err := store.IsCached(step, index, srcFiles)
 		if err != nil {
-			log.Fatal("Error: ", err, ".")
+			logFatal(err)
 		}
 
 		if ok {
@@ -74,7 +90,6 @@ func main() {
 		}
 
 		//TODO save step again
-
 		//bl := getBlobList()
 		//modifiedFiles := getModifiedFiles(blobList, bl)
 		//store.SaveStep(step, index, modifiedFiles)
@@ -86,51 +101,16 @@ func main() {
 	boldGreen.Printf("\nBuild completed (%f seconds)\n", endTime.Sub(startTime).Seconds())
 }
 
-//func getModifiedFiles(oldBlobList, newBlobList map[string]int64) []string {
-//	var results []string
-//
-//	for path, size := range newBlobList {
-//		if oldBlobList[path] != size {
-//			results = append(results, path)
-//		}
-//	}
-//
-//	return results
-//}
 
-//func getBlobList() map[string]int64 {
-//	var blobList = make(map[string]int64)
-//
-//	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-//		if info.IsDir() {
-//			return nil
-//		}
-//
-//		blobList[path] = info.Size()
-//
-//		return nil
-//	})
-//
-//	return blobList
-//}
-
-//func isIgnoredFile(path string) bool {
-//	var blackList = []string{
-//		"ShakeAndBakeFile",
-//	}
-//
-//	for _, entry := range blackList {
-//		if filepath.Base(path) == entry {
-//			return true
-//		}
-//	}
-//
-//	return false
-//}
+func logFatal(message interface{}) {
+	fmt.Printf(color.RedString("Error") + ": %s.\n", message)
+	os.Exit(1)
+}
 
 func executeStep(step string) error {
 	white.Println(logPrefix + "Running")
 	command := exec.Command("bash", "-c", step)
+	command.Dir = workingDir
 	command.Env = os.Environ()
 
 	stdout, _ := command.StdoutPipe()
@@ -147,13 +127,7 @@ func executeStep(step string) error {
 	return command.Wait()
 }
 
-func getSpec() (Spec, error) {
-	path := "ShakeAndBakeFile"
-
-	if !fs.Exists(path) {
-		return Spec{}, errors.New("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
-	}
-
+func getSpec(path string) (Spec, error) {
 	specFile, err := ioutil.ReadFile(path)
 	if err != nil {
 		return Spec{}, err
