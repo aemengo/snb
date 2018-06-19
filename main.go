@@ -37,15 +37,26 @@ func main() {
 	if err != nil {
 		log.Fatal("Error: ", err, ".")
 	}
+	defer store.Close()
 
 	spec, err := getSpec()
 	if err != nil {
 		log.Fatal("Error: ", err, ".")
 	}
 
-	blobList := getBlobList()
 	for index, step := range spec.Steps {
 		boldWhite.Printf("Step %d/%d : %s\n", index+1, len(spec.Steps), step)
+
+		srcFiles := getSrcFiles(step)
+		_, ok, err := store.AnalyzeStep(step, index, srcFiles)
+		if err != nil {
+			log.Fatal("Error: ", err, ".")
+		}
+
+		if ok {
+			white.Println(logPrefix + "Using cache")
+			continue
+		}
 
 		err = executeStep(step)
 		if err != nil {
@@ -58,10 +69,12 @@ func main() {
 			os.Exit(exitCode)
 		}
 
-		bl := getBlobList()
-		modifiedFiles := getModifiedFiles(blobList, bl)
-		store.SaveStep(step, index, modifiedFiles)
-		blobList = bl
+		//TODO save step again
+
+		//bl := getBlobList()
+		//modifiedFiles := getModifiedFiles(blobList, bl)
+		//store.SaveStep(step, index, modifiedFiles)
+		//blobList = bl
 	}
 
 	endTime := time.Now()
@@ -69,60 +82,65 @@ func main() {
 	boldGreen.Printf("\nBuild completed (%f seconds)\n", endTime.Sub(startTime).Seconds())
 }
 
-func getModifiedFiles(oldBlobList, newBlobList map[string]int64) []string {
-	var results []string
+func getSrcFiles(step string) []string {
+	var list []string
 
-	for path, size := range newBlobList {
-		if oldBlobList[path] != size {
-			results = append(results, path)
+	for _, element := range strings.Split(step, " ") {
+		if exists(element) {
+			list = append(list, element)
+			continue
+		}
+
+		goPathElement := filepath.Join("src", element)
+		if exists(goPathElement) {
+			list = append(list, goPathElement)
 		}
 	}
 
-	return results
+	return list
 }
 
-func getBlobList() map[string]int64 {
-	var blobList = make(map[string]int64)
+//func getModifiedFiles(oldBlobList, newBlobList map[string]int64) []string {
+//	var results []string
+//
+//	for path, size := range newBlobList {
+//		if oldBlobList[path] != size {
+//			results = append(results, path)
+//		}
+//	}
+//
+//	return results
+//}
 
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() ||
-			isHiddenFile(path) ||
-			isIgnoredFile(path) {
-			return nil
-		}
+//func getBlobList() map[string]int64 {
+//	var blobList = make(map[string]int64)
+//
+//	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+//		if info.IsDir() {
+//			return nil
+//		}
+//
+//		blobList[path] = info.Size()
+//
+//		return nil
+//	})
+//
+//	return blobList
+//}
 
-		blobList[path] = info.Size()
-
-		return nil
-	})
-
-	return blobList
-}
-
-func isHiddenFile(path string) bool {
-	names := strings.Split(path, string(os.PathSeparator))
-	for _, element := range names {
-		if strings.HasPrefix(element, ".") {
-			return true
-		}
-	}
-
-	return false
-}
-
-func isIgnoredFile(path string) bool {
-	var blackList = []string{
-		"ShakeAndBakeFile",
-	}
-
-	for _, entry := range blackList {
-		if filepath.Base(path) == entry {
-			return true
-		}
-	}
-
-	return false
-}
+//func isIgnoredFile(path string) bool {
+//	var blackList = []string{
+//		"ShakeAndBakeFile",
+//	}
+//
+//	for _, entry := range blackList {
+//		if filepath.Base(path) == entry {
+//			return true
+//		}
+//	}
+//
+//	return false
+//}
 
 func executeStep(step string) error {
 	white.Println(logPrefix + "Running")
@@ -164,7 +182,7 @@ func getSpec() (Spec, error) {
 
 	var spec Spec
 	for _, match := range matches {
-		spec.Steps = append(spec.Steps, match[1])
+		spec.Steps = append(spec.Steps, strings.TrimSpace(match[1]))
 	}
 
 	return spec, nil
