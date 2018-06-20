@@ -50,6 +50,10 @@ func  (fs *FS) GetSrcFiles(step string) ([]Object, error) {
 	for _, item := range strings.Split(step, " ") {
 		element := strings.TrimSpace(item)
 
+		if element == "" {
+			continue
+		}
+
 		if fs.Exists(element) {
 			obj, err := fs.objectFrom(element)
 			if err != nil {
@@ -62,7 +66,7 @@ func  (fs *FS) GetSrcFiles(step string) ([]Object, error) {
 
 		goPathElement := filepath.Join("src", element)
 		if fs.Exists(goPathElement) {
-			obj, err := fs.objectFrom(element)
+			obj, err := fs.objectFrom(goPathElement)
 			if err != nil {
 				return nil, err
 			}
@@ -105,6 +109,7 @@ func (fs *FS) shaDir(srcPath string) (string, error) {
 	h := sha1.New()
 
 	filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
+		//TODO consider extensive testing around this
 		if info.IsDir() || fs.isHiddenFile(path) {
 			return nil
 		}

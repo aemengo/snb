@@ -53,6 +53,8 @@ var _ = Describe("Parser", func() {
 				spec, err := Parse(specContents)
 				Expect(err).NotTo(HaveOccurred())
 
+				Expect(len(spec.Steps)).To(Equal(3))
+
 				Expect(spec.Steps[0]).To(SatisfyAll(
 					ContainSubstring(`./some-command 1 && \`),
 					ContainSubstring(`./some-added-command 1`),
