@@ -1,0 +1,3 @@
+RUN ./operation1.sh
+
+RUN ./operation2.sh

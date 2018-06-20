@@ -8,7 +8,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 	"path/filepath"
 	"time"
-	"io/ioutil"
 )
 
 var binaryPath string
@@ -32,11 +31,4 @@ var _ = AfterSuite(func() {
 
 func fixturePath(name string) string  {
 	return filepath.Join("fixtures", name)
-}
-
-func contentsAt(path string) string {
-	Expect(path).To(BeAnExistingFile())
-	contents, err := ioutil.ReadFile(path)
-	Expect(err).NotTo(HaveOccurred())
-	return string(contents)
 }
