@@ -71,6 +71,33 @@ var _ = Describe("Integration", func() {
 		})
 	})
 
+	Describe("changing state", func() {
+		BeforeEach(func() {
+			workingDir = fixturePath("state-change")
+		})
+
+		It("correctly caches operation steps", func() {
+			defer os.RemoveAll(filepath.Join(fixturePath("state-change"), "build-artifacts"))
+
+			command := exec.Command(binaryPath, workingDir)
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(session).Should(gexec.Exit(0))
+
+			Expect(session).To(gbytes.Say(`Step 1/1`))
+			Expect(session).To(gbytes.Say(`---> Running`))
+
+			command = exec.Command(binaryPath, workingDir)
+			session, err = gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(session).Should(gexec.Exit(0))
+
+			Expect(session).To(gbytes.Say(`Step 1/1`))
+			Expect(session).To(gbytes.Say(`---> Using cache`))
+		})
+	})
+
+
 	Describe("missing ShakeAndBakeFile", func() {
 		BeforeEach(func() {
 			workingDir = fixturePath("no-snb-file")

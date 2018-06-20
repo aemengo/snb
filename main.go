@@ -92,6 +92,11 @@ func main() {
 			os.Exit(exitCode)
 		}
 
+		srcFiles, err = fsClient.GetSrcFiles(step)
+		if err != nil {
+			logFatal(err)
+		}
+
 		err = dbClient.Save(step, index, srcFiles)
 		if err != nil {
 			logFatal(err)
