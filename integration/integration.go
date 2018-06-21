@@ -129,4 +129,16 @@ var _ = Describe("Integration", func() {
 			Expect(session.ExitCode()).NotTo(Equal(0))
 		})
 	})
+
+	Describe("help", func() {
+		It("returns an error", func() {
+			command := exec.Command(binaryPath, "--help")
+			session, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			<-session.Exited
+			Expect(session.ExitCode()).NotTo(Equal(0))
+			Expect(session).To(gbytes.Say(`USAGE`))
+		})
+	})
 })

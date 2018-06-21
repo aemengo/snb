@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"fmt"
 	"github.com/aemengo/snb/parser"
+	"strings"
 )
 
 var (
@@ -28,38 +29,45 @@ var (
 func main() {
 	startTime := time.Now()
 
-	if len(os.Args) == 2 {
+	switch len(os.Args) {
+	case 1:
+		workingDir, _ = filepath.Abs(workingDir)
+	case 2:
+		if strings.HasPrefix(os.Args[1], "-") {
+			showUsage()
+		}
+
 		var err error
 		workingDir, err = filepath.Abs(os.Args[1])
 		if err != nil {
-			logFatal(err)
+			fatal(err)
 		}
-	} else {
-		workingDir, _ = filepath.Abs(workingDir)
+	default:
+		showUsage()
 	}
 
 	fsClient, err := fs.New(workingDir)
 	if err != nil {
-		logFatal(err)
+		fatal(err)
 	}
 
 	if !fsClient.Exists("ShakeAndBakeFile") {
-		logFatal("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
+		fatal("ShakeAndBakeFile not found. please execute in directory containing spec, or pass the working directory in as the only argument")
 	}
 
 	contents, err := fsClient.Get("ShakeAndBakeFile")
 	if err != nil {
-		logFatal(err)
+		fatal(err)
 	}
 
 	spec, err := parser.Parse(contents)
 	if err != nil {
-		logFatal(err)
+		fatal(err)
 	}
 
 	dbClient, err := db.New(filepath.Join(workingDir, ".snb"))
 	if err != nil {
-		logFatal(err)
+		fatal(err)
 	}
 	defer dbClient.Close()
 
@@ -68,12 +76,12 @@ func main() {
 
 		srcFiles, err := fsClient.GetSrcFiles(step)
 		if err != nil {
-			logFatal(err)
+			fatal(err)
 		}
 
 		ok, err := dbClient.IsCached(step, index, srcFiles)
 		if err != nil {
-			logFatal(err)
+			fatal(err)
 		}
 
 		if ok {
@@ -94,12 +102,12 @@ func main() {
 
 		srcFiles, err = fsClient.GetSrcFiles(step)
 		if err != nil {
-			logFatal(err)
+			fatal(err)
 		}
 
 		err = dbClient.Save(step, index, srcFiles)
 		if err != nil {
-			logFatal(err)
+			fatal(err)
 		}
 	}
 
@@ -149,7 +157,16 @@ func exitCode(err error) (int, bool) {
 	return status.ExitStatus(), true
 }
 
-func logFatal(message interface{}) {
+func fatal(message interface{}) {
 	fmt.Printf(color.RedString("Error") + ": %s.\n", message)
+	os.Exit(1)
+}
+
+func showUsage() {
+	fmt.Println(`
+USAGE:	snb [PATH]
+
+Build an image from a ShakeAndBakeFile
+	`)
 	os.Exit(1)
 }
