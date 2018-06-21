@@ -1,0 +1,13 @@
+sudo: false
+
+language: go
+go: [ "1.10.x" ]
+
+git: { depth: 1 }
+install: true
+notifications: { email: false }
+
+before_script:
+- go get -u github.com/onsi/ginkgo/ginkgo
+script:
+- ginkgo -r
