@@ -10,16 +10,15 @@ snb, abbreviation for *"Shake 'N Bake"*, is a flexible build automation tool wit
 
 Using [Homebrew](https://brew.sh/):
 
-```bash
+```shell
+$ brew tap aemengo/snb https://github.com/aemengo/snb
 $ brew update
-...
-
-$ brew install aemengo/snb/snb https://github.com/aemengo/snb
+$ brew install snb
 ```
 
 ## Spec
 
-```bash
+```shell
 $ cat ShakeAndBakeFile
 RUN ./operation.sh ./build-artifacts
 
@@ -53,7 +52,7 @@ Each step is scanned for referenced files and directories. A sha1 checksum is ta
 
 2. Compile the snb library.
 
-	```bash
+	```shell
 	$ go build .
 	```
 
@@ -61,13 +60,13 @@ Each step is scanned for referenced files and directories. A sha1 checksum is ta
    
 1. Install the [ginkgo](https://github.com/onsi/ginkgo) test runner cli
    
-	```bash
+	```shell
 	$ go get -u github.com/onsi/ginkgo/ginkgo
 	```
 
 2. Execute tests
 
-	```bash
+	```shell
 	$ ginkgo -r
 	```
 
