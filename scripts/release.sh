@@ -22,7 +22,7 @@ tar czvf ${dir}/out/snb-darwin-${version}.tgz -C ${dir}/out snb
 shasum=$(shasum -a 256 ${dir}/out/snb-darwin-${version}.tgz | cut -d ' ' -f 1)
 
 cat > ${dir}/Formula/snb.rb <<EOF
-class SnbCli < Formula
+class Snb < Formula
   desc "ShakeAndBake CLI"
   homepage "https://github.com/aemengo/snb"
   version "${version}"
@@ -42,4 +42,4 @@ end
 EOF
 
 git add ${dir}/Formula
-git commit -m "Release: ${version}"
+git commit -m "Release: v${version}"
