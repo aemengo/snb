@@ -8,12 +8,19 @@ snb, abbreviation for *"Shake 'N Bake"*, is a flexible build automation tool wit
 
 ## Installation
 
-Using [Homebrew](https://brew.sh/):
+Using [Homebrew](https://brew.sh/) (darwin):
 
 ```shell
 $ brew tap aemengo/snb https://github.com/aemengo/snb
 $ brew update
 $ brew install snb
+```
+
+Using [Go](https://golang.org/) (all platforms):
+
+```shell
+$ export PATH="$GOPATH/bin:$PATH"
+$ go get -u github.com/aemengo/snb
 ```
 
 ## Spec
